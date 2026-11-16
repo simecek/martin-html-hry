@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chytání jablíček</title>
+    <style>
+        /* CSS určuje vzhled a umístění obrázků. */
+        body {
+            max-width: 400px;
+            margin: 30px auto;
+            padding: 0 16px;
+            font-family: Arial, sans-serif;
+        }
+        #hriste {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+            border: 2px solid black;
+            background-color: #e8f4ff;
+        }
+        #hriste img { position: absolute; user-select: none; }
+        #panacek { top: 320px; left: 160px; }
+        .jablko { top: 0; left: 184px; }
+        .cervive { filter: grayscale(1) sepia(1) saturate(3) brightness(0.65); }
+        button { padding: 8px 16px; font-size: 16px; }
+        .ovladani { display: flex; gap: 12px; margin: 16px 0; }
+        .sipka {
+            flex: 1;
+            min-height: 64px;
+            touch-action: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        .sipka:active { background-color: #c9e6ff; }
+    </style>
+</head>
+<body>
+    <!-- Obrázky i texty jsou obyčejné HTML. -->
+    <h1>Chytání jablíček</h1>
+    <p>Drž šipku pod hřištěm nebo klávesu <kbd>A</kbd> pro pohyb doleva
+        a <kbd>D</kbd> pro pohyb doprava.
+        Za každé chycené jablíčko získáš bod. Klávesou <kbd>Enter</kbd> začneš novou hru.</p>
+    <p>Skóre: <strong id="skore">0</strong> |
+        Jablíčka celkem: <strong id="pocet-jablek">1</strong></p>
+
+    <div id="hriste" role="region" aria-label="Hřiště pro chytání jablíček">
+        <img id="panacek" src="assets/panacek.png" alt="Panáček" data-maska="panacek"
+            width="80" height="80" draggable="false">
+    </div>
+    <div class="ovladani" role="group" aria-label="Ovládání panáčka">
+        <button id="doleva" class="sipka" type="button">◀ Doleva</button>
+        <button id="doprava" class="sipka" type="button">Doprava ▶</button>
+    </div>
+    <!-- Šablona se sama nezobrazuje. Vyrábíme podle ní další obrázky jablek. -->
+    <template id="sablona-jablka">
+        <img class="jablko" src="assets/jablko.png" alt="Padající jablíčko" data-maska="jablko"
+            width="32" height="32" draggable="false">
+    </template>
+    <p id="konec-hry" role="status" hidden>Červivé jablíčko tě zasáhlo. Konec hry!</p>
+    <button id="nova-hra" type="button" hidden>Nová hra</button>
+    <p>Začneš s jedním zdravým jablíčkem. Chyť ho a budou padat dvě.
+        Chyť další dvě a budou tři, pak čtyři… Nejvýše jich padá sedm.</p>
+    <p>Minuté jablíčko zhnědne a odráží se od hran. Pozor: když tě zasáhne,
+        hra končí! Červené jablíčko při srážce s hnědým zmizí. Hnědé zmizí
+        až po třech červených. Při srážce dvou hnědých zmizí obě.</p>
+    <p>Červivá jablíčka jsou navíc. Zdravá se průběžně doplňují.</p>
+    <noscript><p>Pro pohyb a počítání skóre potřebuješ zapnutý JavaScript.</p></noscript>
+
+    <script src="assets/kolizni-masky.js"></script>
+    <script>
+        const hriste = document.getElementById("hriste");
+        const skoreText = document.getElementById("skore");
+        const pocetJablekText = document.getElementById("pocet-jablek");
+        const sablonaJablka = document.getElementById("sablona-jablka");
+        const zpravaKonec = document.getElementById("konec-hry");
+        const tlacitkoNovaHra = document.getElementById("nova-hra");
+        // Po chycení 1, pak dalších 2, dalších 3… přibude zdravé jablíčko.
+        const hraniceSkore = [1, 3, 6, 10, 15, 21];
+
+        // Třída je návod na výrobu objektu. Použijeme ji pro oba obrázky.
+        // „this“ znamená „tento konkrétní objekt“.
+        class HerniObjekt {
+            constructor(obrazek) {
+                this.obrazek = obrazek;
+                this.sirka = this.obrazek.width;
+                this.vyska = this.obrazek.height;
+                // Všechny kopie stejného obrázku sdílejí jednu masku průhlednosti.
+                this.maska = kolizniMasky[obrazek.dataset.maska];
+                this.x = 0; // Vzdálenost od levého okraje hřiště.
+                this.y = 0; // Vzdálenost od horního okraje hřiště.
+            }
+
+            posun(dx, dy) {
+                this.x += dx;
+                this.y += dy;
+            }
+
+            zobraz() {
+                this.obrazek.style.left = this.x + "px";
+                this.obrazek.style.top = this.y + "px";
+            }
+
+            dotykaSe(druhy) {
+                // Polohy zaokrouhlíme na pixely. Nejdřív najdeme společný obdélník.
+                const ax = Math.round(this.x), ay = Math.round(this.y);
+                const bx = Math.round(druhy.x), by = Math.round(druhy.y);
+                const vlevo = Math.max(ax, bx), vpravo = Math.min(ax + this.sirka, bx + druhy.sirka);
+                const nahore = Math.max(ay, by), dole = Math.min(ay + this.vyska, by + druhy.vyska);
+
+                // Zásah nastane jen tam, kde jsou viditelné oba obrázky.
+                for (let y = nahore; y < dole; y++) {
+                    for (let x = vlevo; x < vpravo; x++) {
+                        if (this.maska[y - ay][x - ax] === "1" &&
+                            druhy.maska[y - by][x - bx] === "1") return true;
+                    }
+                }
+                return false;
+            }
+
+            dotykaSeSpodniHrany() {
+                return this.y + this.vyska >= hriste.clientHeight;
+            }
+        }
+
+        // Jablko zdědí polohu, zobrazení a kolize. Navíc umí zčervivět a odrážet se.
+        class Jablko extends HerniObjekt {
+            constructor(obrazek) {
+                super(obrazek);
+                this.cervive = false;
+                this.zmizelo = false;
+                this.zasahy = 0; // Kolik červených jablek už červivé zasáhlo.
+                this.dx = 0; // Vodorovná rychlost.
+                this.dy = 2; // Svislá rychlost.
+            }
+
+            vratNahoru() {
+                this.y = -this.vyska;
+                this.x = Math.random() * (hriste.clientWidth - this.sirka);
+            }
+
+            zkazSe() {
+                this.cervive = true;
+                this.obrazek.classList.add("cervive");
+                this.obrazek.alt = "Červivé jablíčko";
+                this.y = hriste.clientHeight - this.vyska;
+                // Náhodně doleva nebo doprava a vždy vzhůru od spodní hrany.
+                this.dx = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 2);
+                this.dy = -(2 + Math.random() * 2);
+            }
+
+            zasahniZdrave(zdrave) {
+                zdrave.zmizelo = true;
+                this.zasahy++;
+                if (this.zasahy >= 3) this.zmizelo = true;
+            }
+
+            pohniSe() {
+                this.posun(this.dx, this.dy);
+                if (!this.cervive) return;
+
+                const pravyOkraj = hriste.clientWidth - this.sirka;
+                const spodniOkraj = hriste.clientHeight - this.vyska;
+                if (this.x <= 0) {
+                    this.x = 0;
+                    this.dx = Math.abs(this.dx);
+                } else if (this.x >= pravyOkraj) {
+                    this.x = pravyOkraj;
+                    this.dx = -Math.abs(this.dx);
+                }
+                if (this.y <= 0) {
+                    this.y = 0;
+                    this.dy = Math.abs(this.dy);
+                } else if (this.y >= spodniOkraj) {
+                    this.y = spodniOkraj;
+                    this.dy = -Math.abs(this.dy);
+                }
+            }
+        }
+
+        const panacek = new HerniObjekt(document.getElementById("panacek"));
+        panacek.x = (hriste.clientWidth - panacek.sirka) / 2;
+        panacek.y = hriste.clientHeight - panacek.vyska;
+
+        // Pole (seznam) uchovává všechny objekty jablek.
+        const jablka = [];
+
+        let skore = 0;
+        let konecHry = false;
+        let casovac;
+        const klavesy = { a: false, d: false };
+        // Každý prst má vlastní číslo. Klávesnice a dotyk fungují i současně.
+        const dotyky = { a: new Set(), d: new Set() };
+
+        for (const [id, smer] of [["doleva", "a"], ["doprava", "d"]]) {
+            const tlacitko = document.getElementById(id);
+            tlacitko.addEventListener("pointerdown", function (udalost) {
+                if (konecHry || udalost.button !== 0) return;
+                udalost.preventDefault();
+                tlacitko.setPointerCapture(udalost.pointerId);
+                dotyky[smer].add(udalost.pointerId);
+            });
+            // Zachycení ukazatele zajistí puštění i při vyjetí prstu mimo tlačítko.
+            for (const typ of ["pointerup", "pointercancel", "lostpointercapture"]) {
+                tlacitko.addEventListener(typ, function (udalost) {
+                    dotyky[smer].delete(udalost.pointerId);
+                });
+            }
+            tlacitko.addEventListener("contextmenu", udalost => udalost.preventDefault());
+        }
+
+        function zastavPohyb() {
+            klavesy.a = false;
+            klavesy.d = false;
+            dotyky.a.clear();
+            dotyky.d.clear();
+        }
+
+        document.addEventListener("keydown", function (udalost) {
+            if (udalost.ctrlKey || udalost.metaKey || udalost.altKey) return;
+            if (udalost.key === "Enter") {
+                udalost.preventDefault();
+                if (!udalost.repeat) novaHra();
+                return;
+            }
+            if (konecHry) return;
+            const klavesa = udalost.key.toLowerCase();
+            if (klavesa === "a" || klavesa === "d") klavesy[klavesa] = true;
+        });
+
+        document.addEventListener("keyup", function (udalost) {
+            const klavesa = udalost.key.toLowerCase();
+            if (klavesa === "a" || klavesa === "d") klavesy[klavesa] = false;
+        });
+
+        // Při přepnutí do jiného okna nesmí zůstat klávesa „zaseknutá“.
+        window.addEventListener("blur", zastavPohyb);
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) zastavPohyb();
+        });
+
+        function pridejJablko() {
+            const obrazek = sablonaJablka.content.firstElementChild.cloneNode(true);
+            hriste.appendChild(obrazek);
+            const jablko = new Jablko(obrazek);
+            jablko.vratNahoru();
+            if (jablka.length === 0) {
+                // První jablíčko padá doprostřed, abys mohl snadno začít.
+                jablko.x = (hriste.clientWidth - jablko.sirka) / 2;
+            } else {
+                jablko.y -= 80; // Nové jablíčko začne padat o chvíli později.
+            }
+            jablka.push(jablko);
+        }
+
+        function zobrazHru() {
+            panacek.zobraz();
+            for (const jablko of jablka) jablko.zobraz();
+            pocetJablekText.textContent = jablka.length;
+        }
+
+        function ukonciHru() {
+            konecHry = true;
+            clearInterval(casovac);
+            zastavPohyb();
+            zpravaKonec.hidden = false;
+            tlacitkoNovaHra.hidden = false;
+            zobrazHru();
+        }
+
+        function novaHra() {
+            clearInterval(casovac);
+            for (const jablko of jablka) jablko.obrazek.remove();
+            jablka.length = 0;
+            skore = 0;
+            skoreText.textContent = skore;
+            konecHry = false;
+            zastavPohyb();
+            panacek.x = (hriste.clientWidth - panacek.sirka) / 2;
+            zpravaKonec.hidden = true;
+            tlacitkoNovaHra.hidden = true;
+            pridejJablko();
+            zobrazHru();
+            casovac = setInterval(krok, 20);
+        }
+
+        function krok() {
+            if (konecHry) return;
+            if (klavesy.a || dotyky.a.size > 0) panacek.posun(-5, 0);
+            if (klavesy.d || dotyky.d.size > 0) panacek.posun(5, 0);
+
+            // Panáček nesmí vyjet za levý ani pravý okraj hřiště.
+            panacek.x = Math.max(0, Math.min(panacek.x, hriste.clientWidth - panacek.sirka));
+            // Nejprve pohneme všemi jablky a necháme minutá zčervivět.
+            for (const jablko of jablka) {
+                jablko.pohniSe();
+                if (!jablko.cervive && jablko.dotykaSeSpodniHrany() && !jablko.dotykaSe(panacek)) {
+                    jablko.zkazSe();
+                }
+            }
+
+            // Zásah červivým jablkem má přednost před ostatními srážkami.
+            for (const jablko of jablka) {
+                if (jablko.cervive && jablko.dotykaSe(panacek)) {
+                    ukonciHru();
+                    return;
+                }
+            }
+
+            // Každou dvojici porovnáme jednou. Dvě zdravá jablka si nevadí.
+            for (let i = 0; i < jablka.length; i++) {
+                for (let j = i + 1; j < jablka.length; j++) {
+                    const prvni = jablka[i];
+                    const druhe = jablka[j];
+                    if (prvni.zmizelo || druhe.zmizelo) continue;
+                    if ((prvni.cervive || druhe.cervive) && prvni.dotykaSe(druhe)) {
+                        if (prvni.cervive && druhe.cervive) {
+                            prvni.zmizelo = true;
+                            druhe.zmizelo = true;
+                        } else {
+                            const cervive = prvni.cervive ? prvni : druhe;
+                            const zdrave = prvni.cervive ? druhe : prvni;
+                            cervive.zasahniZdrave(zdrave);
+                        }
+                        if (prvni.zmizelo) break;
+                    }
+                }
+            }
+
+            for (const jablko of jablka) {
+                if (!jablko.zmizelo && !jablko.cervive && jablko.dotykaSe(panacek)) {
+                    skore++;
+                    skoreText.textContent = skore;
+                    jablko.vratNahoru();
+                }
+            }
+
+            // Mažeme odzadu, aby se při odebírání nepřeskočilo další jablko.
+            for (let i = jablka.length - 1; i >= 0; i--) {
+                if (jablka[i].zmizelo) {
+                    jablka[i].obrazek.remove();
+                    jablka.splice(i, 1);
+                }
+            }
+
+            // Skóre 0 = jedno, 1–2 = dvě, 3–5 = tři… Od 21 bodů je jich sedm.
+            // Doplňujeme zdravá jablka. Červivá zůstávají jako překážky navíc.
+            const cilovyPocet = 1 + hraniceSkore.filter(hranice => skore >= hranice).length;
+            const zdravych = jablka.filter(jablko => !jablko.cervive).length;
+            for (let pocet = zdravych; pocet < cilovyPocet; pocet++) pridejJablko();
+            zobrazHru();
+        }
+
+        tlacitkoNovaHra.addEventListener("click", novaHra);
+        novaHra(); // Prohlížeč bude provádět krok každých 20 milisekund.
+    </script>
+</body>
+</html>

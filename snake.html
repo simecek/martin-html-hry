@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Martinův had</title>
+    <style>
+        /* CSS říká, jak stránka vypadá. */
+        body {
+            max-width: 440px;
+            margin: 30px auto;
+            padding: 0 16px;
+            font-family: Arial, sans-serif;
+        }
+        .ramecek {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+        }
+        table {
+            width: 100%;
+            height: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            border: 2px solid black;
+        }
+        td { padding: 0; border: 1px solid white; background-color: #eeeeee; }
+        .had { background-color: #27833c; }
+        .hlava { background-color: #124520; }
+        .jablko { background-color: #cc2222; }
+        button { padding: 8px 16px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <!-- HTML říká, co je na stránce. -->
+    <h1>Martinův had</h1>
+    <p>Ovládej hada šipkami na klávesnici. Jez červená jablka.
+        Nenarážej do zdi ani do vlastního těla!</p>
+    <p>Skóre: <strong id="skore">0</strong></p>
+    <!-- Hřiště je obyčejná HTML tabulka: tr = řádek, td = políčko.
+         Každý řádek má 20 políček. Barvy určují CSS třídy výše.
+         Had i jablko jsou vidět už bez spuštění JavaScriptu. -->
+    <div class="ramecek">
+        <table id="hriste" aria-hidden="true">
+        <tbody>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="jablko"></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td class="had"></td><td class="had"></td><td class="had hlava"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+        </table>
+    </div>
+    <!-- Všechny hlášky jsou HTML. Atribut hidden znamená „zatím schovat“. -->
+    <p id="zprava" role="status">
+        <span id="uvod">Klikni na tlačítko a začni hrát.</span>
+        <span id="bezi" hidden>Hraješ! Najdi červené jablko.</span>
+        <span id="prohra" hidden>Konec hry! Skóre vidíš nad hřištěm.
+            Klikni na Nová hra a zkus to znovu.</span>
+        <span id="vyhra" hidden>Vyhrál jsi! Zaplnil jsi celé hřiště.
+            Klikni na Nová hra a zkus to znovu.</span>
+    </p>
+    <button id="start" type="button">Nová hra</button>
+    <noscript><p>Hřiště vidíš díky HTML a CSS. Pro hraní zapni JavaScript.</p></noscript>
+
+    <script>
+        // JavaScript mění stav hry. Hřiště a jeho vzhled už existují v HTML a CSS.
+        const hriste = document.getElementById("hriste");
+        const policka = hriste.querySelectorAll("td");
+        const skoreText = document.getElementById("skore");
+        const zpravy = document.querySelectorAll("#zprava span");
+
+        // Velikost hřiště přečteme přímo z HTML tabulky.
+        const pocetPoli = hriste.rows.length;
+        const rychlost = 160; // Počet milisekund mezi kroky. Méně = rychleji.
+
+        let had;
+        let jablko;
+        let smer;
+        let zatocil;
+        let skore;
+        let casovac = null;
+
+        function novaHra() {
+            clearInterval(casovac);
+            // První políčko v seznamu je hlava hada.
+            had = [{ x: 5, y: 10 }, { x: 4, y: 10 }, { x: 3, y: 10 }];
+            smer = { x: 1, y: 0 };
+            zatocil = false;
+            skore = 0;
+            skoreText.textContent = skore;
+            zobrazZpravu("bezi");
+            noveJablko();
+            nakresli();
+            casovac = setInterval(krok, rychlost);
+        }
+
+        function noveJablko() {
+            // Náhodné místo zkoušíme tak dlouho, dokud na něm neleží had.
+            do {
+                jablko = {
+                    x: Math.floor(Math.random() * pocetPoli),
+                    y: Math.floor(Math.random() * pocetPoli)
+                };
+            } while (had.some(dil => dil.x === jablko.x && dil.y === jablko.y));
+        }
+
+        function nakresli() {
+            // Nekreslíme pixely. Jen měníme CSS třídy existujících HTML políček.
+            for (const policko of policka) policko.className = "";
+            if (jablko) hriste.rows[jablko.y].cells[jablko.x].className = "jablko";
+            for (const dil of had) {
+                hriste.rows[dil.y].cells[dil.x].className = "had";
+            }
+            hriste.rows[had[0].y].cells[had[0].x].className = "had hlava";
+        }
+
+        function zobrazZpravu(id) {
+            // Texty nevyrábíme v JavaScriptu. Jen ukážeme správný HTML prvek.
+            for (const zprava of zpravy) zprava.hidden = zprava.id !== id;
+        }
+
+        function konec(idZpravy) {
+            clearInterval(casovac);
+            casovac = null;
+            zobrazZpravu(idZpravy);
+        }
+
+        function krok() {
+            const hlava = { x: had[0].x + smer.x, y: had[0].y + smer.y };
+            const jiJablko = hlava.x === jablko.x && hlava.y === jablko.y;
+
+            // Ocas se při běžném kroku posune, proto jeho místo bude volné.
+            const telo = jiJablko ? had : had.slice(0, -1);
+            const narazDoZdi = hlava.x < 0 || hlava.x >= pocetPoli ||
+                hlava.y < 0 || hlava.y >= pocetPoli;
+            const narazDoSebe = telo.some(dil => dil.x === hlava.x && dil.y === hlava.y);
+            if (narazDoZdi || narazDoSebe) {
+                konec("prohra");
+                return;
+            }
+
+            // Přidáme novou hlavu. Bez jablka také odebereme poslední dílek.
+            had.unshift(hlava);
+            if (jiJablko) {
+                skore++;
+                skoreText.textContent = skore;
+                if (had.length === pocetPoli * pocetPoli) {
+                    jablko = null;
+                    nakresli();
+                    konec("vyhra");
+                    return;
+                }
+                noveJablko();
+            } else {
+                had.pop();
+            }
+            zatocil = false;
+            nakresli();
+        }
+
+        const sipky = {
+            ArrowUp: { x: 0, y: -1 },
+            ArrowDown: { x: 0, y: 1 },
+            ArrowLeft: { x: -1, y: 0 },
+            ArrowRight: { x: 1, y: 0 }
+        };
+
+        document.addEventListener("keydown", function (udalost) {
+            const novySmer = sipky[udalost.key];
+            if (!novySmer) return;
+            udalost.preventDefault(); // Šipky nemají posouvat celou stránku.
+            if (casovac === null || zatocil) return;
+            // Had se nesmí otočit přímo zpět do svého krku.
+            if (novySmer.x === -smer.x && novySmer.y === -smer.y) return;
+            if (novySmer.x === smer.x && novySmer.y === smer.y) return;
+            smer = novySmer;
+            zatocil = true; // Mezi dvěma kroky dovolíme jen jednu zatáčku.
+        });
+
+        document.getElementById("start").addEventListener("click", novaHra);
+
+    </script>
+</body>
+</html>
